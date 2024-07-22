@@ -15,13 +15,8 @@ from tqdm import tqdm
 from realesrgan import RealESRGANer
 from realesrgan.archs.srvgg_arch import SRVGGNetCompact
 
-try:
-    import ffmpeg
-except ImportError:
-    import pip
-    pip.main(['install', '--user', 'ffmpeg-python'])
-    import ffmpeg
-
+# make ffmpeg-python one of the required dependencies
+import ffmpeg
 
 def get_video_meta_info(video_path):
     ret = {}
@@ -288,6 +283,11 @@ def run(args):
 
     num_gpus = torch.cuda.device_count()
     num_process = num_gpus * args.num_process_per_gpu
+
+    # TODO: this logic is non-obvious and ugly
+    if torch.backends.mps.is_available():
+        num_process = 1 * args.num_process_per_gpu
+
     if num_process == 1:
         inference_video(args, video_save_path)
         return
