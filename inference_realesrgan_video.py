@@ -20,14 +20,14 @@ import ffmpeg
 
 def get_video_meta_info(video_path):
     ret = {}
-    probe = ffmpeg.probe(video_path)
+    probe = ffmpeg.probe(video_path, count_frames=None)
     video_streams = [stream for stream in probe['streams'] if stream['codec_type'] == 'video']
     has_audio = any(stream['codec_type'] == 'audio' for stream in probe['streams'])
     ret['width'] = video_streams[0]['width']
     ret['height'] = video_streams[0]['height']
     ret['fps'] = eval(video_streams[0]['avg_frame_rate'])
     ret['audio'] = ffmpeg.input(video_path).audio if has_audio else None
-    ret['nb_frames'] = int(video_streams[0]['nb_frames'])
+    ret['nb_frames'] = int(video_streams[0]['nb_read_frames'])
     return ret
 
 
@@ -264,7 +264,11 @@ def inference_video(args, video_save_path, device=None, total_workers=1, worker_
         else:
             writer.write_frame(output)
 
-        torch.cuda.synchronize(device)
+        # on macOS use mps equivalent
+        if torch.backends.mps.is_available():
+            torch.mps.synchronize()
+        else:
+            torch.cuda.synchronize(device)
         pbar.update(1)
 
     reader.close()
