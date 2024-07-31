@@ -30,7 +30,7 @@ class RealESRGANer():
                  scale,
                  model_path,
                  dni_weight=None,
-                 model=None,
+                 model: torch.nn.Module=None,
                  tile=0,
                  tile_pad=10,
                  pre_pad=10,
@@ -78,6 +78,13 @@ class RealESRGANer():
         self.model = model.to(self.device)
         if self.half:
             self.model = self.model.half()
+
+        self.model = self.model.to(memory_format=torch.channels_last)
+
+        if self.device.type == 'mps':
+            self.model = torch.compile(self.model, backend='aot_eager')
+        else:
+            self.model = torch.compile(self.model)
 
     def dni(self, net_a, net_b, dni_weight, key='params', loc='cpu'):
         """Deep network interpolation.
